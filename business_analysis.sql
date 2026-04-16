@@ -59,13 +59,13 @@ WHERE MONTHNAME(cp.transaction_date) LIKE 'May';
 
 WITH 
     Revenue (Name, TotalRevenue) AS 
-(
+    (
     SELECT DISTINCT p.product_name, SUM(p.unit_price*cp.quantity) OVER (PARTITION BY cp.product_id)
-FROM product AS p
-JOIN customer_purchase AS cp
-    ON p.product_id = cp.product_id
-)
-SELECT Name, TotalRevenue 
+    FROM product AS p
+    JOIN customer_purchase AS cp
+        ON p.product_id = cp.product_id
+    )
+SELECT Name'Product Name', TotalRevenue 
 FROM Revenue
 ORDER BY TotalRevenue DESC
 LIMIT 10;
@@ -74,12 +74,12 @@ LIMIT 10;
 
 WITH 
     Customersales (Name, Sales) AS 
-(
+    (
     SELECT DISTINCT c.customer_id, SUM(cp.quantity) OVER (PARTITION BY c.customer_id)
-FROM customer_purchase AS cp
-JOIN customer AS c
-    ON c.customer_id = cp.customer_id
-)
+    FROM customer_purchase AS cp
+    JOIN customer AS c
+        ON c.customer_id = cp.customer_id
+    )
 SELECT CONCAT(c.first_name,' ',c.last_name) AS 'Customer Name', cs.Sales
 FROM Customersales AS cs
 JOIN customer AS c
@@ -124,21 +124,58 @@ WITH
             ON ts.cust = pr.customer
         ORDER BY ts.Totalrev, pr.Revperproduct DESC
         )
-    SELECT DISTINCT crv.custname AS 'Customer Name', ts.Totalrev AS 'Total Revenue', pr.prodname AS 'Product Name', tp.Topprodrev AS 'Total Revenue of Product for customer x'
-    FROM Topspend AS ts
-    JOIN TopProduct AS tp
-        ON tp.customer = ts.cust
-    JOIN CustomerREV AS crv
-        ON crv.customer = ts.cust
-    JOIN Productrev AS pr
-        ON pr.customer = ts.cust
-    WHERE pr.Revperproduct = tp.Topprodrev
-    ORDER BY ts.Totalrev DESC;
+SELECT DISTINCT crv.custname AS 'Customer Name', ts.Totalrev AS 'Total Revenue', pr.prodname AS 'Product Name', tp.Topprodrev AS 'Total Revenue of Product for customer x'
+FROM Topspend AS ts
+JOIN TopProduct AS tp
+    ON tp.customer = ts.cust
+JOIN CustomerREV AS crv
+    ON crv.customer = ts.cust
+JOIN Productrev AS pr
+    ON pr.customer = ts.cust
+WHERE pr.Revperproduct = tp.Topprodrev
+ORDER BY ts.Totalrev DESC;
 
 -- 7. For every city, what are our top 10 products in terms of overall sales?
 
 
+WITH
+    Initial (product, city, prodname, prodpercity) AS
+    (
+    SELECT DISTINCT p.product_id, c.city, p.product_name, SUM(p.unit_price*cp.quantity) OVER (PARTITION BY c.city, cp.product_id)
+    FROM customer_purchase AS cp 
+    JOIN product AS p
+        ON p.product_id = cp.product_id
+    JOIN customer AS c
+        ON c.customer_id = cp.customer_id
+    ),
+    Toprank (product, city, prodname, prodpercity, ranking) AS
+    (
+    SELECT product, city, prodname, prodpercity, ROW_NUMBER() OVER (PARTITION BY city ORDER BY prodpercity DESC)
+    FROM Initial
+    )
+SELECT city, prodname AS 'Product Name', prodpercity AS 'SUM for city x'
+FROM Toprank
+WHERE ranking < 11
+ORDER BY city, ranking;
+
 
 -- 8. In terms of the total quantity of products purchased per month, what is our month-over-month growth from April 2025 to May 2025?
+
+WITH
+    May (year, month, sum) AS 
+    (
+    SELECT DISTINCT YEAR(transaction_date) ,MONTHNAME(transaction_date), SUM(quantity) OVER (PARTITION BY MONTH(transaction_date))
+    FROM customer_purchase
+    WHERE MONTHNAME(transaction_date) LIKE 'May' 
+    ),
+    April (year, month, sum) AS 
+    (
+    SELECT DISTINCT YEAR(transaction_date), MONTHNAME(transaction_date), SUM(quantity) OVER (PARTITION BY MONTH(transaction_date))
+    FROM customer_purchase
+    WHERE MONTHNAME(transaction_date) LIKE 'April'
+    )
+SELECT (((m.sum - a.sum)/a.sum)*100) AS "month-over-month growth" FROM May AS m
+JOIN April AS a
+    ON a.year = m.year;
 
 
