@@ -57,11 +57,35 @@ WHERE MONTHNAME(cp.transaction_date) LIKE 'May';
 
 -- 4. What are the top 10 products in terms of total sales (i.e. the products that generated the most revenue)?
 
-
+WITH 
+    Revenue (Name, TotalRevenue) AS 
+(
+    SELECT DISTINCT p.product_name, SUM(p.unit_price*cp.quantity) OVER (PARTITION BY cp.product_id)
+FROM product AS p
+JOIN customer_purchase AS cp
+    ON p.product_id = cp.product_id
+)
+SELECT Name, TotalRevenue 
+FROM Revenue
+ORDER BY TotalRevenue DESC
+LIMIT 10;
 
 -- 5. Who are our top 10 customers that have bought the most number of products overall?
 
-
+WITH 
+    Customersales (Name, Sales) AS 
+(
+    SELECT DISTINCT c.customer_id, SUM(cp.quantity) OVER (PARTITION BY c.customer_id)
+FROM customer_purchase AS cp
+JOIN customer AS c
+    ON c.customer_id = cp.customer_id
+)
+SELECT CONCAT(c.first_name,' ',c.last_name) AS 'Customer Name', cs.Sales
+FROM Customersales AS cs
+JOIN customer AS c
+    ON c.customer_id = cs.Name
+ORDER BY cs.Sales DESC
+LIMIT 10;
 
 -- 6. Who are our top 10 customers in terms of their overall spending? What is the product that they have respectively spent the most on, and how much have they spent on this product?
 
