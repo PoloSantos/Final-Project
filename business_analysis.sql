@@ -20,14 +20,15 @@ CREATE Database shazada;
 
 USE shazada;
 
-SOURCE /Users/polo/Desktop/codes/Project2-Santos-Polo-Lam-Kenz/customer_purchase.sql;
-SOURCE /Users/polo/Desktop/codes/Project2-Santos-Polo-Lam-Kenz/customer.sql;
-SOURCE /Users/polo/Desktop/codes/Project2-Santos-Polo-Lam-Kenz/product.sql;
 
-DESCRIBE customer_purchase;
+SOURCE customer.sql;
+SOURCE product.sql;
+SOURCE customer_purchase.sql;
+
+
 DESCRIBE customer;
 DESCRIBE product;
-
+DESCRIBE customer_purchase;
 
 -- 1. What are the daily sales from April 1, 2025 to May 31, 2025? Show date and daily sales amount.
 -- Order by date, oldest to most recent.
@@ -48,12 +49,11 @@ ORDER BY MONTH(transaction_date) ASC;
 -- 3. How much is the overall sales for each city for the month of May 2025? Show city name and overall sales for the month.
 -- Order by overall sales, highest to lowest.
 
-SELECT DISTINCT MONTH(cp.transaction_date), SUM(cp.quantity) OVER (PARTITION BY c.city)
+SELECT DISTINCT c.city ,SUM(cp.quantity) OVER (PARTITION BY c.city) AS 'Overall Sales'
 FROM customer_purchase AS cp
-WHERE MONTH(cp.transaction_date) = 5 OR MONTH(cp.transaction_date) = 4 
-ORDER BY MONTH(cp.transaction_date) ASC
-JOIN customer AS c 
-    ON c.customer_id = cp.customer_id;
+JOIN customer AS c
+    ON c.customer_id = cp.customer_id
+WHERE MONTHNAME(cp.transaction_date) LIKE 'May';
 
 -- 4. What are the top 10 products in terms of total sales (i.e. the products that generated the most revenue)?
 
