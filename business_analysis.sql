@@ -14,44 +14,51 @@
 -- of its use has been clearly noted along with a proper citation
 -- in the comments of my/our program.
 
-DROP database shazada;
+-- DROP database shazada;
 
-CREATE Database shazada;
+-- CREATE Database shazada;
 
-USE shazada;
+-- USE shazada;
 
-SOURCE customer.sql;
-SOURCE product.sql;
-SOURCE customer_purchase.sql;
+-- SOURCE customer.sql;
+-- SOURCE product.sql;
+-- SOURCE customer_purchase.sql;
 
-DESCRIBE customer;
-DESCRIBE product;
-DESCRIBE customer_purchase;
+-- DESCRIBE customer;
+-- DESCRIBE product;
+-- DESCRIBE customer_purchase;
 
 -- 1. What are the daily sales from April 1, 2025 to May 31, 2025? Show date and daily sales amount.
 -- Order by date, oldest to most recent.
 
-SELECT DISTINCT transaction_date, SUM(quantity) OVER (PARTITION BY transaction_date) AS 'Sum per date'
-FROM customer_purchase
-WHERE MONTH(transaction_date) = 5 OR MONTH(transaction_date) = 4 
-ORDER BY transaction_date ASC;
+SELECT DISTINCT cp.transaction_date, SUM(cp.quantity*p.unit_price) OVER (PARTITION BY cp.transaction_date) AS 'Sum per date'
+FROM customer_purchase AS cp
+JOIN product AS p
+    ON p.product_id = cp.product_id
+WHERE MONTH(cp.transaction_date) = 5 OR MONTH(cp.transaction_date) = 4 
+ORDER BY cp.transaction_date ASC;
 
 -- 2. What are the monthly sales from April 1, 2025 to May 31, 2025? Show month and total amount for the month.
 -- Order by month, oldest to most recent.
 
-SELECT DISTINCT MONTHNAME(transaction_date) 'Month', SUM(quantity) OVER (PARTITION BY MONTH(transaction_date)) AS 'Sum per month'
-FROM customer_purchase
-WHERE MONTHNAME(transaction_date) LIKE 'May' OR MONTHNAME(transaction_date) LIKE 'April'
-ORDER BY MONTHNAME(transaction_date) ASC;
+SELECT DISTINCT MONTHNAME(cp.transaction_date) 'Month', SUM(cp.quantity*p.unit_price) OVER (PARTITION BY MONTH(cp.transaction_date)) AS 'Sum per month'
+FROM customer_purchase AS cp
+JOIN product AS p
+    ON p.product_id = cp.product_id
+WHERE MONTHNAME(cp.transaction_date) LIKE 'May' OR MONTHNAME(cp.transaction_date) LIKE 'April'
+ORDER BY MONTHNAME(cp.transaction_date) ASC;
 
 -- 3. How much is the overall sales for each city for the month of May 2025? Show city name and overall sales for the month.
 -- Order by overall sales, highest to lowest.
 
-SELECT DISTINCT c.city ,SUM(cp.quantity) OVER (PARTITION BY c.city) AS 'Overall Sales'
+SELECT DISTINCT c.city ,SUM(cp.quantity*p.unit_price) OVER (PARTITION BY c.city) AS 'Overall_Sales'
 FROM customer_purchase AS cp
 JOIN customer AS c
     ON c.customer_id = cp.customer_id
-WHERE MONTHNAME(cp.transaction_date) LIKE 'May';
+JOIN product AS p
+    ON p.product_id = cp.product_id
+WHERE MONTHNAME(cp.transaction_date) LIKE 'May'
+ORDER BY Overall_Sales DESC;
 
 -- 4. What are the top 10 products in terms of total sales (i.e. the products that generated the most revenue)?
 
