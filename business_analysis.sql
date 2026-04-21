@@ -82,20 +82,15 @@ LIMIT 10;
 -- 6. Who are our top 10 customers in terms of their overall spending? What is the product that they have respectively spent the most on, and how much have they spent on this product?
 
 WITH 
-    CustomerREV (customer, custname, Totalcustomerrev) AS 
+    CustomerREV (customer, custname, Totalrev) AS 
         (
-        SELECT DISTINCT c.customer_id, CONCAT(c.first_name,' ',c.last_name) AS 'Customer Name', SUM(cp.quantity*p.unit_price) OVER (PARTITION BY c.customer_id) 
+        SELECT DISTINCT c.customer_id, CONCAT(c.first_name,' ',c.last_name) AS 'Customer Name', SUM(cp.quantity*p.unit_price) OVER (PARTITION BY c.customer_id) AS 'Total_Revenue'
         FROM customer_purchase AS cp
         JOIN product AS p
             ON p.product_id = cp.product_id
         JOIN customer AS c
             ON c.customer_id = cp.customer_id
-        ),
-    Topspend (cust, Totalrev) AS
-        (
-        SELECT customer, Totalcustomerrev
-        FROM CustomerREV
-        ORDER BY Totalcustomerrev DESC
+        ORDER BY Total_Revenue DESC
         LIMIT 10
         ),
     Productrev (customer, product, prodname ,Revperproduct) AS 
@@ -109,23 +104,20 @@ WITH
         ),
     TopProduct (customer, product ,Totalrev, Topprodrev) AS
         (
-        SELECT ts.cust,pr.product , ts.Totalrev, MAX(pr.Revperproduct) OVER (PARTITION BY ts.cust) FROM Topspend AS ts
-        JOIN CustomerREV AS crv
-            ON crv.customer = ts.cust
+        SELECT crv.customer,pr.product , crv.Totalrev, MAX(pr.Revperproduct) OVER (PARTITION BY crv.customer) 
+        FROM CustomerREV AS crv
         INNER JOIN Productrev AS pr
-            ON ts.cust = pr.customer
-        ORDER BY ts.Totalrev, pr.Revperproduct DESC
+            ON crv.customer = pr.customer
+        ORDER BY crv.Totalrev, pr.Revperproduct DESC
         )
-SELECT DISTINCT crv.custname AS 'Customer Name', ts.Totalrev AS 'Total Revenue', pr.prodname AS 'Top Product Name', tp.Topprodrev AS 'Total Revenue of Product for customer x'
-FROM Topspend AS ts
+SELECT DISTINCT crv.custname AS 'Customer Name', crv.Totalrev AS 'Total Revenue', pr.prodname AS 'Top Product Name', tp.Topprodrev AS 'Total Revenue of Product for customer x'
+FROM CustomerREV AS crv
 JOIN TopProduct AS tp
-    ON tp.customer = ts.cust
-JOIN CustomerREV AS crv
-    ON crv.customer = ts.cust
+    ON tp.customer = crv.customer
 JOIN Productrev AS pr
-    ON pr.customer = ts.cust
+    ON pr.customer = crv.customer
 WHERE pr.Revperproduct = tp.Topprodrev
-ORDER BY ts.Totalrev DESC;
+ORDER BY crv.Totalrev DESC;
 
 -- 7. For every city, what are our top 10 products in terms of overall sales?
 
