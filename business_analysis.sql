@@ -55,17 +55,11 @@ WHERE MONTHNAME(cp.transaction_date) LIKE 'May';
 
 -- 4. What are the top 10 products in terms of total sales (i.e. the products that generated the most revenue)?
 
-WITH 
-    Revenue (Name, TotalRevenue) AS 
-    (
-    SELECT DISTINCT p.product_name, SUM(p.unit_price*cp.quantity) OVER (PARTITION BY cp.product_id)
-    FROM product AS p
-    JOIN customer_purchase AS cp
-        ON p.product_id = cp.product_id
-    )
-SELECT Name'Product Name', TotalRevenue 
-FROM Revenue
-ORDER BY TotalRevenue DESC
+SELECT DISTINCT p.product_name, SUM(p.unit_price*cp.quantity) OVER (PARTITION BY cp.product_id) AS 'Total_Revenue'
+FROM product AS p
+JOIN customer_purchase AS cp
+    ON p.product_id = cp.product_id
+ORDER BY Total_Revenue DESC
 LIMIT 10;
 
 -- 5. Who are our top 10 customers that have bought the most number of products overall?
